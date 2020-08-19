@@ -1,0 +1,224 @@
+<html>
+
+<head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.14.0/css/all.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.7.5/css/bulma.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+
+
+    <style>
+        .durak-readonly {
+            background-color: lightgray;
+        }
+    </style>
+
+</head>
+
+<body>
+    <div id="app">
+        <div>
+            <button class="button" @click="host">host</button>
+            <button class="button" @click="join">join</button>
+        </div>
+        <div v-if="mode == 'host'">
+            <div>offer:</div>
+            <div class="field has-addons">
+                <p class="control">
+                    <span class="button has-text-info" @click="clipboard(offer)">
+                        <i class="fas fa-copy"></i>
+                    </span>
+                </p>
+                <p class="control">
+                    <input class="input durak-readonly" v-model="offer" readonly></input>
+                </p>
+            </div>
+            <div v-if="!answer">please enter answer:</div>
+            <div v-if="answer">answer:</div>
+            <input class="input" v-model="potential_answer" :readonly="answer"
+                v-bind:class="{ 'durak-readonly': answer }"></input>
+            <button class="button" v-if="!answer" @click="accept_answer">submit</button>
+
+            <div v-if="answer">
+                <div>candidates:</div>
+                <div class="field has-addons" v-for="ice_candidate in ice_candidates">
+                    <p class="control">
+                        <span class="button has-text-info" @click="clipboard(ice_candidate)">
+                            <i class="fas fa-copy"></i>
+                        </span>
+                    </p>
+                    <p class="control">
+                        <input class="input durak-readonly" :value="ice_candidate" readonly>
+                        </input>
+                    </p>
+                </div>
+            </div>
+
+            <div v-if="connected">
+                <div>local data:</div>
+                <textarea class="textarea" v-model="local_data"></textarea>
+                <div>remote data:</div>
+                <textarea class="textarea durak-readonly" v-model="remote_data" readonly></textarea>
+            </div>
+        </div>
+        <div v-if="mode == 'join'">
+            <div v-if="!offer">please enter offer:</div>
+            <div v-if="offer">offer:</div>
+            <input class="input" v-model="potential_offer" :readonly="offer"
+                v-bind:class="{ 'durak-readonly': offer }"></input>
+            <button class="button" v-if="!offer" @click="accept_offer">submit</button>
+
+            <div v-if="answer">
+                <div>answer:</div>
+                <div class="field has-addons">
+                    <p class="control">
+                        <span class="button has-text-info" @click="clipboard(answer)">
+                            <i class="fas fa-copy"></i>
+                        </span>
+                    </p>
+                    <p class="control">
+                        <input class="input durak-readonly" v-model="answer" readonly></input>
+                    </p>
+                </div>
+
+                <div>remote candidate:</div>
+                <input class="input" v-model="remote_ice_candidate"></input>
+                <button class="button" @click="accept_remote_ice_candidate">connect</button>
+            </div>
+
+            <div v-if="connected">
+                <div>local data:</div>
+                <textarea class="textarea" v-model="local_data"></textarea>
+                <div>remote data:</div>
+                <textarea class="textarea durak-readonly" v-model="remote_data" readonly></textarea>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const vueobj = new Vue({
+            el: '#app',
+            data: {
+                mode: '',
+                conn: null,
+                chan: null,
+                offer: null,
+                answer: null,
+                ice_candidates: [],
+                potential_offer: null,
+                potential_answer: null,
+                remote_ice_candidate: null,
+                connected: false,
+                local_data: '',
+                remote_data: '',
+            },
+            watch: {
+                local_data: function (val) {
+                    const vm = this;
+                    vm.chan.send(val);
+                }
+            },
+            methods: {
+                reset() {
+                    const vm = this;
+                    vm.mode = '';
+                    vm.conn = null;
+                    vm.chan = null;
+                    vm.offer = null;
+                    vm.answer = null;
+                    vm.ice_candidates = [];
+                    vm.potential_offer = null;
+                    vm.potential_answer = null;
+                    vm.remote_ice_candidate = null;
+                    vm.connected = false;
+                    vm.local_data = '';
+                    vm.remote_data = '';
+                },
+                host() {
+                    const vm = this;
+                    vm.reset();
+                    vm.mode = 'host';
+
+                    vm.make_conn();
+
+                    vm.conn.onnegotiationneeded = () => {
+                        vm.conn.createOffer().then(
+                            (offer_desc) => {
+                                vm.conn.setLocalDescription(offer_desc);
+                                vm.offer = JSON.stringify(offer_desc.toJSON());
+                            },
+                            (err) => {
+                                console.log(`Failed to create session description: ${err.toString()}`);
+                            }
+                        );
+                    }
+
+                    vm.chan = vm.conn.createDataChannel('stuff');
+                    vm.setup_chan();
+                },
+                join() {
+                    const vm = this;
+                    vm.reset();
+                    vm.mode = 'join';
+
+                    vm.make_conn();
+
+                    vm.conn.ondatachannel = (evt) => {
+                        vm.chan = evt.channel;
+                        vm.setup_chan();
+                    };
+                },
+                accept_offer() {
+                    const vm = this;
+                    vm.offer = vm.potential_offer;
+                    vm.conn.setRemoteDescription(JSON.parse(vm.offer));
+                    vm.conn.createAnswer().then(
+                        (answer_desc) => {
+                            vm.conn.setLocalDescription(answer_desc);
+                            vm.answer = JSON.stringify(answer_desc.toJSON());
+                        },
+                        (err) => {
+                            console.log(`Failed to create session description: ${err.toString()}`);
+                        }
+                    );
+                },
+                accept_answer() {
+                    const vm = this;
+                    vm.answer = vm.potential_answer;
+                    vm.conn.setRemoteDescription(JSON.parse(vm.answer));
+                },
+                accept_remote_ice_candidate() {
+                    const vm = this;
+                    vm.remote_ice_candidate;
+                    vm.conn.addIceCandidate(JSON.parse(vm.remote_ice_candidate));
+                },
+                make_conn() {
+                    const vm = this;
+                    vm.conn = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+                    vm.conn.onicecandidate = (evt) => {
+                        if (evt.candidate) {
+                            vm.ice_candidates.push(JSON.stringify(evt.candidate.toJSON()));
+                        }
+                    };
+                },
+                setup_chan() {
+                    const vm = this;
+                    vm.chan.onopen = () => {
+                        vm.connected = true;
+                    };
+                    vm.chan.onclose = () => {
+                        vm.connected = false;
+                    };
+                    vm.chan.onmessage = (evt) => {
+                        vm.remote_data = evt.data;
+                    };
+                },
+                clipboard(text) {
+                    navigator.clipboard.writeText(text);
+                }
+            },
+        });
+    </script>
+
+</body>
+
+</html>
