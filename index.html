@@ -95,6 +95,163 @@
     </div>
 
     <script>
+        function uuidv4() {
+            return ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, c =>
+                (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
+            );
+        }
+
+        function shuffle(arr) {
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        class Card {
+            static Values = '6789TJQA';
+            static Suits = '♠♥♦♣';
+
+            constructor(value, suit) {
+                this.value = value;
+                this.suit = suit;
+            }
+
+            get key() {
+                return this.value + this.suit;
+            }
+
+            static from_key(k) {
+                return new Card(k[0], k[1]);
+            }
+
+            get rank() {
+                return Card.Values.indexOf(this.value) + 6;
+            }
+        };
+
+        class Game {
+            static new(player_ids) {
+                const game = new Game();
+                game.id = uuidv4();
+                game.player_ids = shuffle(player_ids);
+
+                // Prepare deck.
+                game.deck = [];
+                for (let value of Card.Values) {
+                    for (let suit of Card.Suits) {
+                        game.deck.push(new Card(value, suit));
+                    }
+                }
+                shuffle(game.deck);
+                game.trump = game.deck[0].suit;
+
+                // Distribute cards.
+                game.hands = {};
+                for (let player_id of game.player_ids) {
+                    game.hands[player_id] = [];
+                    for (let i = 0; i < 6; i++) {
+                        game.hands[player_id].push(game.deck.pop());
+                    }
+                }
+
+                // Determine player order.
+                let lowest_trump_value = Infinity;
+                game.active_player_idx = 0;
+                for (let player_idx = 0; player_idx < game.player_ids.length; player_idx++) {
+                    const player_id = game.player_ids[player_idx];
+                    for (let card of game.hands[player_id]) {
+                        if (card.suit == game.trump && card.rank < lowest_trump_value) {
+                            lowest_trump_value = card.rank;
+                            game.active_player_idx = player_idx;
+                        }
+                    }
+                }
+
+                // Define board state.
+                game.board = [];
+                game.discard = [];
+
+                return game;
+            }
+
+            get state() {
+                return JSON.stringify(this);
+            }
+
+            static load(state) {
+                return Object.assign(new Game(), JSON.parse(state));
+            }
+
+            get active_player() {
+                return this.player_ids[this.active_player_idx]
+            }
+
+            get defending_player_idx() {
+                return (this.active_player_idx + 1) % this.player_ids.length
+            }
+
+            get defending_player() {
+                return this.player_ids[defending_player_idx]
+            }
+
+            end_turn() {
+                const board_cards = [];
+                let defense_was_successful = true;
+                for (let stack of this.board) {
+                    if (stack.length == 1) {
+                        defense_was_successful = false;
+                    } else if (stack.length != 2) {
+                        throw `Board state corrupted: unexepected stack of size ${stack.length}`
+                    }
+                    board_cards = board_cards.concat(stack);
+                }
+
+                // TODO: Draw cards.
+                // TODO: Announce non-losers.
+                // TODO: Check for loser.
+
+                if (defense_was_successful) {
+                    this.discard = this.discard.concat(board_cards);
+                    this.active_player_idx = (this.active_player_idx + 1) % this.player_ids.length;
+                } else {
+                    this.hands[this.active_player] = this.hands[this.active_player].concat(board_cards);
+                    this.active_player_idx = (this.active_player_idx + 2) % this.player_ids.length;
+                }
+            }
+
+            validate_attack(player_id, card) {
+                // Validate player_id is real.
+                if (player_id == this.defending_player) {
+                    return {
+                        is_valid: false,
+                        reason: 'Defending player cannot attack.',
+                    };
+                }
+                // If board is empty, validate player_id is active player.
+                // If board is not empty, validate card value is already on the board.
+                // Validate number of stacks doesn't exceed six.
+
+                return {
+                    is_valid: true,
+                    reason: '',
+                };
+            }
+
+            attack(player_id, card) {
+                const attack_info = validate_attack(player_id, card);
+                if (!attack_info.is_valid) {
+                    throw `Invalid attack: ${attack_info.reason}`;
+                }
+                
+                this.board.push([card]);
+                // Remove card from player.
+            }
+
+            // defend
+        };
+
         const vueobj = new Vue({
             el: '#app',
             data: {
@@ -217,6 +374,7 @@
                 }
             },
         });
+
     </script>
 
 </body>
