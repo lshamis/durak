@@ -261,7 +261,13 @@
 
                 // If board is empty, validate player_id is active player.
                 // If board is not empty, validate card rank is already on the board.
-                // Validate number of stacks doesn't exceed six.
+
+                if (this.board.length >= 6) {
+                    return {
+                        is_valid: false,
+                        reason: 'Max attacks reached.',
+                    };
+                }
 
                 return {
                     is_valid: true,
@@ -287,10 +293,33 @@
                     };
                 }
 
-                // Validate the stack index exists.
-                // Validate the defending player has the card.
-                // Validate the stack isn't complete.
-                // Validate the played card beats the stack card.
+                if (this.board.length <= stack_idx) {
+                    return {
+                        is_valid: false,
+                        reason: 'No such attack exists.',
+                    };
+                }
+
+                if (this.board[stack_idx].length >= 2) {
+                    return {
+                        is_valid: false,
+                        reason: 'Attack already defended.',
+                    };
+                }
+
+                if (Card.suit(this.board[stack_idx][0]) != Card.suit(card) && Card.suit(card) != this.trump) {
+                    return {
+                        is_valid: false,
+                        reason: `Cannot defend ${Card.suit(this.board[stack_idx][0])} with ${Card.suit(card)}.`,
+                    };
+                }
+
+                if (Card.suit(card) != this.trump && Card.value(this.board[stack_idx][0]) > Card.value(card)) {
+                    return {
+                        is_valid: false,
+                        reason: `Cannot defend ${Card.rank(this.board[stack_idx][0])} with ${Card.rank(card)}.`,
+                    };
+                }
 
                 return {
                     is_valid: true,
