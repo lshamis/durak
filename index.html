@@ -110,24 +110,19 @@
         }
 
         class Card {
-            static Values = '6789TJQA';
+            static Ranks = '6789TJQA';
             static Suits = '♠♥♦♣';
 
-            constructor(value, suit) {
-                this.value = value;
-                this.suit = suit;
+            static value(card) {
+                return Card.Ranks.indexOf(card[0]) + 6;
             }
 
-            get key() {
-                return this.value + this.suit;
+            static rank(card) {
+                return card[0];
             }
 
-            static from_key(k) {
-                return new Card(k[0], k[1]);
-            }
-
-            get rank() {
-                return Card.Values.indexOf(this.value) + 6;
+            static suit(card) {
+                return card[1];
             }
         };
 
@@ -139,13 +134,13 @@
 
                 // Prepare deck.
                 game.deck = [];
-                for (let value of Card.Values) {
+                for (let rank of Card.Ranks) {
                     for (let suit of Card.Suits) {
-                        game.deck.push(new Card(value, suit));
+                        game.deck.push(rank + suit);
                     }
                 }
                 shuffle(game.deck);
-                game.trump = game.deck[0].suit;
+                game.trump = Card.suit(game.deck[0]);
 
                 // Distribute cards.
                 game.hands = {};
@@ -155,6 +150,7 @@
                         game.hands[player_id].push(game.deck.pop());
                     }
                 }
+                game.#sort_hands();
 
                 // Determine player order.
                 let lowest_trump_value = Infinity;
@@ -162,8 +158,8 @@
                 for (let player_idx = 0; player_idx < game.player_ids.length; player_idx++) {
                     const player_id = game.player_ids[player_idx];
                     for (let card of game.hands[player_id]) {
-                        if (card.suit == game.trump && card.rank < lowest_trump_value) {
-                            lowest_trump_value = card.rank;
+                        if (Card.suit(card) == game.trump && Card.value(card) < lowest_trump_value) {
+                            lowest_trump_value = Card.value(card);
                             game.active_player_idx = player_idx;
                         }
                     }
@@ -193,7 +189,27 @@
             }
 
             get defending_player() {
-                return this.player_ids[defending_player_idx]
+                return this.player_ids[this.defending_player_idx]
+            }
+
+            #sort_hands() {
+                for (let hand of this.hands) {
+                    hand.sort((lhs, rhs) => {
+                        if (Card.suit(lhs) != Card.suit(rhs)) {
+                            if (Card.suit(lhs) == game2.trump) {
+                                return 1;
+                            }
+                            if (Card.suit(rhs) == game2.trump) {
+                                return -1;
+                            }
+                            return (Card.suit(lhs) < Card.suit(rhs)) ? -1 : 1;
+                        }
+                        if (Card.value(lhs) != Card.value(rhs)) {
+                            return (Card.value(lhs) < Card.value(rhs)) ? -1 : 1;
+                        }
+                        return 0;
+                    })
+                }
             }
 
             end_turn() {
@@ -208,7 +224,7 @@
                     board_cards = board_cards.concat(stack);
                 }
 
-                // TODO: Draw cards.
+                // TODO: Draw cards, #sort_hands.
                 // TODO: Announce non-losers.
                 // TODO: Check for loser.
 
@@ -222,15 +238,29 @@
             }
 
             validate_attack(player_id, card) {
-                // Validate player_id is real.
+                if (!this.player_ids.includes(player_id)) {
+                    return {
+                        is_valid: false,
+                        reason: 'Invalid player id.',
+                    };
+                }
+
+                if (!this.hands[player_id].includes(card)) {
+                    return {
+                        is_valid: false,
+                        reason: 'Player does not have given card.',
+                    };
+                }
+
                 if (player_id == this.defending_player) {
                     return {
                         is_valid: false,
                         reason: 'Defending player cannot attack.',
                     };
                 }
+
                 // If board is empty, validate player_id is active player.
-                // If board is not empty, validate card value is already on the board.
+                // If board is not empty, validate card rank is already on the board.
                 // Validate number of stacks doesn't exceed six.
 
                 return {
@@ -240,16 +270,43 @@
             }
 
             attack(player_id, card) {
-                const attack_info = validate_attack(player_id, card);
+                const attack_info = this.validate_attack(player_id, card);
                 if (!attack_info.is_valid) {
                     throw `Invalid attack: ${attack_info.reason}`;
                 }
-                
+
                 this.board.push([card]);
-                // Remove card from player.
+                this.hands[player_id] = this.hands[player_id].filter(c => { return c != card; });
             }
 
-            // defend
+            validate_defend(stack_idx, card) {
+                if (!this.hands[this.defending_player].includes(card)) {
+                    return {
+                        is_valid: false,
+                        reason: 'Player does not have given card.',
+                    };
+                }
+
+                // Validate the stack index exists.
+                // Validate the defending player has the card.
+                // Validate the stack isn't complete.
+                // Validate the played card beats the stack card.
+
+                return {
+                    is_valid: true,
+                    reason: '',
+                };
+            }
+
+            defend(stack_idx, card) {
+                const defend_info = this.validate_defend(stack_idx, card);
+                if (!defend_info.is_valid) {
+                    throw `Invalid defense: ${defend_info.reason}`;
+                }
+
+                this.board[stack_idx].push(card);
+                this.hands[this.defending_player] = this.hands[this.defending_player].filter(c => { return c != card; });
+            }
         };
 
         const vueobj = new Vue({
