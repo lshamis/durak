@@ -110,8 +110,8 @@
         }
 
         class Card {
-            static Ranks = '6789TJQA';
-            static Suits = '♠♥♦♣';
+            static Ranks = '6789TJQKA';
+            static Suits = '♣♦♥♠';
 
             static value(card) {
                 return Card.Ranks.indexOf(card[0]) + 6;
@@ -123,6 +123,45 @@
 
             static suit(card) {
                 return card[1];
+            }
+
+            static Images = {
+                '6♣': 'https://upload.wikimedia.org/wikipedia/commons/8/88/Atlas_deck_6_of_clubs.svg',
+                '6♦': 'https://upload.wikimedia.org/wikipedia/commons/7/74/Atlas_deck_6_of_diamonds.svg',
+                '6♥': 'https://upload.wikimedia.org/wikipedia/commons/a/a6/Atlas_deck_6_of_hearts.svg',
+                '6♠': 'https://upload.wikimedia.org/wikipedia/commons/3/3c/Atlas_deck_6_of_spades.svg',
+                '7♣': 'https://upload.wikimedia.org/wikipedia/commons/6/6e/Atlas_deck_7_of_clubs.svg',
+                '7♦': 'https://upload.wikimedia.org/wikipedia/commons/c/c4/Atlas_deck_7_of_diamonds.svg',
+                '7♥': 'https://upload.wikimedia.org/wikipedia/commons/b/b0/Atlas_deck_7_of_hearts.svg',
+                '7♠': 'https://upload.wikimedia.org/wikipedia/commons/c/c1/Atlas_deck_7_of_spades.svg',
+                '8♣': 'https://upload.wikimedia.org/wikipedia/commons/5/50/Atlas_deck_8_of_clubs.svg',
+                '8♦': 'https://upload.wikimedia.org/wikipedia/commons/4/4c/Atlas_deck_8_of_diamonds.svg',
+                '8♥': 'https://upload.wikimedia.org/wikipedia/commons/0/0b/Atlas_deck_8_of_hearts.svg',
+                '8♠': 'https://upload.wikimedia.org/wikipedia/commons/f/f2/Atlas_deck_8_of_spades.svg',
+                '9♣': 'https://upload.wikimedia.org/wikipedia/commons/2/27/Atlas_deck_9_of_clubs.svg',
+                '9♦': 'https://upload.wikimedia.org/wikipedia/commons/7/77/Atlas_deck_9_of_diamonds.svg',
+                '9♥': 'https://upload.wikimedia.org/wikipedia/commons/0/0f/Atlas_deck_9_of_hearts.svg',
+                '9♠': 'https://upload.wikimedia.org/wikipedia/commons/a/a2/Atlas_deck_9_of_spades.svg',
+                'T♣': 'https://upload.wikimedia.org/wikipedia/commons/2/26/Atlas_deck_10_of_clubs.svg',
+                'T♦': 'https://upload.wikimedia.org/wikipedia/commons/e/e9/Atlas_deck_10_of_diamonds.svg',
+                'T♥': 'https://upload.wikimedia.org/wikipedia/commons/7/73/Atlas_deck_10_of_hearts.svg',
+                'T♠': 'https://upload.wikimedia.org/wikipedia/commons/9/91/Atlas_deck_10_of_spades.svg',
+                'J♣': 'https://upload.wikimedia.org/wikipedia/commons/5/5d/Atlas_deck_jack_of_clubs.svg',
+                'J♦': 'https://upload.wikimedia.org/wikipedia/commons/6/6e/Atlas_deck_jack_of_diamonds.svg',
+                'J♥': 'https://upload.wikimedia.org/wikipedia/commons/a/a3/Atlas_deck_jack_of_hearts.svg',
+                'J♠': 'https://upload.wikimedia.org/wikipedia/commons/2/2e/Atlas_deck_jack_of_spades.svg',
+                'Q♣': 'https://upload.wikimedia.org/wikipedia/commons/5/59/Atlas_deck_queen_of_clubs.svg',
+                'Q♦': 'https://upload.wikimedia.org/wikipedia/commons/b/bc/Atlas_deck_queen_of_diamonds.svg',
+                'Q♥': 'https://upload.wikimedia.org/wikipedia/commons/6/60/Atlas_deck_queen_of_hearts.svg',
+                'Q♠': 'https://upload.wikimedia.org/wikipedia/commons/8/8a/Atlas_deck_queen_of_spades.svg',
+                'K♣': 'https://upload.wikimedia.org/wikipedia/commons/c/c5/Atlas_deck_king_of_clubs.svg',
+                'K♦': 'https://upload.wikimedia.org/wikipedia/commons/b/b8/Atlas_deck_king_of_diamonds.svg',
+                'K♥': 'https://upload.wikimedia.org/wikipedia/commons/3/3b/Atlas_deck_king_of_hearts.svg',
+                'K♠': 'https://upload.wikimedia.org/wikipedia/commons/7/7a/Atlas_deck_king_of_spades.svg',
+                'A♣': 'https://upload.wikimedia.org/wikipedia/commons/d/de/Atlas_deck_ace_of_clubs.svg',
+                'A♦': 'https://upload.wikimedia.org/wikipedia/commons/1/1a/Atlas_deck_ace_of_diamonds.svg',
+                'A♥': 'https://upload.wikimedia.org/wikipedia/commons/3/3e/Atlas_deck_ace_of_hearts.svg',
+                'A♠': 'https://upload.wikimedia.org/wikipedia/commons/7/75/Atlas_deck_ace_of_spades.svg',
             }
         };
 
