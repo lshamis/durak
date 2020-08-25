@@ -49,35 +49,27 @@
 
         <div v-if="mode == 'game'">
 
-            <div class="tile is-ancestor">
-                <div class="tile is-parent">
-                    <article class="tile is-child">
-                        <img v-if="game.deck.length >= 1" :src="Card.Images[game.deck[0]]">
-                        <img v-if="game.deck.length >= 2" :src="Card.Images.card_back_blue_and_brown"
-                            style="margin-top: -110%;">
-                        <p
-                            style="margin-top: -150%; text-align: center; font-size: 4em; -webkit-text-stroke: 2px white;">
-                            {{game.deck.length}}</p>
-                        <p></p>
-                    </article>
+            <div class="columns">
+                <div class="column is-2" style="display: grid;">
+                    <img v-if="game.deck.length >= 1" :src="Card.Images[game.deck[0]]">
+                    <img v-if="game.deck.length >= 2" :src="Card.Images.card_back_blue_and_brown"
+                        style="margin-top: -110%;">
+                    <p style="margin-top: -150%; text-align: center; font-size: 4em; -webkit-text-stroke: 2px white;">
+                        {{game.deck.length}}
+                    </p>
                 </div>
-                <div class="tile is-parent" v-for="attack_idx in [1, 2, 3, 4, 5, 6]">
-                    <article class="tile is-child box">
-                        <p class="">Attack Card {{attack_idx}}</p>
-                    </article>
+                <div class="column" v-for="attack_idx in [0, 1, 2, 3, 4, 5]">
+                    Attack {{attack_idx}}
                 </div>
             </div>
 
-            <div class="tile is-ancestor" v-for="player_id in [1, 2, 3, 4, 5, 6]">
-                <div class="tile is-parent">
-                    <article class="tile is-child box">
-                        <p class="">Video</p>
-                    </article>
+            <div class="columns" v-for="pid in game.player_ids">
+                <div class="column is-2">
+                    Video
                 </div>
-                <div class="tile is-parent">
-                    <article class="tile is-child box">
-                        <p class="">Hand</p>
-                    </article>
+                <div class="column" v-for="card in game.hands[pid]">
+                    <img v-if="pid == player_id" :src="Card.Images[card]">
+                    <img v-else :src="Card.Images.card_back_blue_and_brown">
                 </div>
             </div>
 
@@ -452,17 +444,20 @@
                 room: '',
                 Card: Card,
                 game: null,
+                player_id: null,
             },
             methods: {
                 host() {
                     const vm = this;
                     vm.mode = 'game';
-                    vm.game = Game.new([1, 2, 3, 4, 5])
+                    vm.game = Game.new([0, 1, 2, 3, 4])
+                    vm.player_id = 0;
                     console.log('game', vm.game.state)
                 },
                 join() {
                     const vm = this;
                     vm.mode = 'game';
+                    vm.player_id = 1;
                 },
             }
         });
