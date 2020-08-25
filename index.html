@@ -4,93 +4,83 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.14.0/css/all.min.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.7.5/css/bulma.min.css" />
     <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
-
-
-    <style>
-        .durak-readonly {
-            background-color: lightgray;
-        }
-    </style>
-
+    <script src="https://unpkg.com/peerjs@1.3.1/dist/peerjs.min.js"></script>
 </head>
 
 <body>
     <div id="app">
-        <div>
-            <button class="button" @click="host">host</button>
-            <button class="button" @click="join">join</button>
-        </div>
-        <div v-if="mode == 'host'">
-            <div>offer:</div>
-            <div class="field has-addons">
-                <p class="control">
-                    <span class="button has-text-info" @click="clipboard(offer)">
-                        <i class="fas fa-copy"></i>
-                    </span>
-                </p>
-                <p class="control">
-                    <input class="input durak-readonly" v-model="offer" readonly></input>
-                </p>
-            </div>
-            <div v-if="!answer">please enter answer:</div>
-            <div v-if="answer">answer:</div>
-            <input class="input" v-model="potential_answer" :readonly="answer"
-                v-bind:class="{ 'durak-readonly': answer }"></input>
-            <button class="button" v-if="!answer" @click="accept_answer">submit</button>
+        <div v-if="mode == 'login'" style="background-color: #aa4433">
+            <section class="section" style="height: 100%;">
 
-            <div v-if="answer">
-                <div>candidates:</div>
-                <div class="field has-addons" v-for="ice_candidate in ice_candidates">
-                    <p class="control">
-                        <span class="button has-text-info" @click="clipboard(ice_candidate)">
-                            <i class="fas fa-copy"></i>
-                        </span>
-                    </p>
-                    <p class="control">
-                        <input class="input durak-readonly" :value="ice_candidate" readonly>
-                        </input>
-                    </p>
+                <div class="container" style="top: 50%; transform: translateY(-50%);">
+                    <div class="columns is-centered">
+                        <div class="column is-one-third">
+                            <div class="level" style="justify-content: center;">
+                                <img
+                                    src="https://fontmeme.com/permalink/200824/6487bdb3682249e077e7f3da1e1b2bbe.png"></img>
+                            </div>
+
+                            <div class="field">
+                                <label class="label">Name</label>
+                                <div class="control">
+                                    <input class="input" v-model="name">
+                                </div>
+
+                            </div>
+
+                            <div class="field">
+                                <label class="label">Room</label>
+                                <div class="control">
+                                    <input class="input" v-model="room">
+                                </div>
+                            </div>
+
+                            <div class="has-text-centered">
+                                <a class="button is-warning" style="width: 48%;" @click="host">Host</a>
+                                <a class="button is-warning" style="width: 48%;" @click="join">Join</a>
+                            </div>
+
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+        </div>
+
+        <div v-if="mode == 'game'">
+
+            <div class="tile is-ancestor">
+                <div class="tile is-parent">
+                    <article class="tile is-child">
+                        <img v-if="game.deck.length >= 1" :src="Card.Images[game.deck[0]]">
+                        <img v-if="game.deck.length >= 2" :src="Card.Images.card_back_blue_and_brown"
+                            style="margin-top: -110%;">
+                        <p
+                            style="margin-top: -150%; text-align: center; font-size: 4em; -webkit-text-stroke: 2px white;">
+                            {{game.deck.length}}</p>
+                        <p></p>
+                    </article>
+                </div>
+                <div class="tile is-parent" v-for="attack_idx in [1, 2, 3, 4, 5, 6]">
+                    <article class="tile is-child box">
+                        <p class="">Attack Card {{attack_idx}}</p>
+                    </article>
                 </div>
             </div>
 
-            <div v-if="connected">
-                <div>local data:</div>
-                <textarea class="textarea" v-model="local_data"></textarea>
-                <div>remote data:</div>
-                <textarea class="textarea durak-readonly" v-model="remote_data" readonly></textarea>
-            </div>
-        </div>
-        <div v-if="mode == 'join'">
-            <div v-if="!offer">please enter offer:</div>
-            <div v-if="offer">offer:</div>
-            <input class="input" v-model="potential_offer" :readonly="offer"
-                v-bind:class="{ 'durak-readonly': offer }"></input>
-            <button class="button" v-if="!offer" @click="accept_offer">submit</button>
-
-            <div v-if="answer">
-                <div>answer:</div>
-                <div class="field has-addons">
-                    <p class="control">
-                        <span class="button has-text-info" @click="clipboard(answer)">
-                            <i class="fas fa-copy"></i>
-                        </span>
-                    </p>
-                    <p class="control">
-                        <input class="input durak-readonly" v-model="answer" readonly></input>
-                    </p>
+            <div class="tile is-ancestor" v-for="player_id in [1, 2, 3, 4, 5, 6]">
+                <div class="tile is-parent">
+                    <article class="tile is-child box">
+                        <p class="">Video</p>
+                    </article>
                 </div>
-
-                <div>remote candidate:</div>
-                <input class="input" v-model="remote_ice_candidate"></input>
-                <button class="button" @click="accept_remote_ice_candidate">connect</button>
+                <div class="tile is-parent">
+                    <article class="tile is-child box">
+                        <p class="">Hand</p>
+                    </article>
+                </div>
             </div>
 
-            <div v-if="connected">
-                <div>local data:</div>
-                <textarea class="textarea" v-model="local_data"></textarea>
-                <div>remote data:</div>
-                <textarea class="textarea durak-readonly" v-model="remote_data" readonly></textarea>
-            </div>
         </div>
     </div>
 
@@ -126,6 +116,8 @@
             }
 
             static Images = {
+                'card_back_blue_and_brown': 'https://upload.wikimedia.org/wikipedia/commons/d/d8/Atlas_deck_card_back_blue_and_brown.svg',
+                'card_back_green_and_dark_red': 'https://upload.wikimedia.org/wikipedia/commons/7/7d/Atlas_deck_card_back_green_and_dark_red.svg',
                 '6♣': 'https://upload.wikimedia.org/wikipedia/commons/8/88/Atlas_deck_6_of_clubs.svg',
                 '6♦': 'https://upload.wikimedia.org/wikipedia/commons/7/74/Atlas_deck_6_of_diamonds.svg',
                 '6♥': 'https://upload.wikimedia.org/wikipedia/commons/a/a6/Atlas_deck_6_of_hearts.svg',
@@ -189,7 +181,7 @@
                         game.hands[player_id].push(game.deck.pop());
                     }
                 }
-                game.#sort_hands();
+                game._sort_hands();
 
                 // Determine player order.
                 let lowest_trump_value = Infinity;
@@ -231,14 +223,14 @@
                 return this.player_ids[this.defending_player_idx]
             }
 
-            #sort_hands() {
-                for (let hand of this.hands) {
-                    hand.sort((lhs, rhs) => {
+            _sort_hands() {
+                for (let player_id of this.player_ids) {
+                    this.hands[player_id].sort((lhs, rhs) => {
                         if (Card.suit(lhs) != Card.suit(rhs)) {
-                            if (Card.suit(lhs) == game2.trump) {
+                            if (Card.suit(lhs) == this.trump) {
                                 return 1;
                             }
-                            if (Card.suit(rhs) == game2.trump) {
+                            if (Card.suit(rhs) == this.trump) {
                                 return -1;
                             }
                             return (Card.suit(lhs) < Card.suit(rhs)) ? -1 : 1;
@@ -263,7 +255,7 @@
                     board_cards = board_cards.concat(stack);
                 }
 
-                // TODO: Draw cards, #sort_hands.
+                // TODO: Draw cards, _sort_hands.
                 // TODO: Announce non-losers.
                 // TODO: Check for loser.
 
@@ -377,129 +369,103 @@
             }
         };
 
+        class Room {
+            static create(name) {
+                const room = new Room();
+                room.name = name;
+                room.peer = new Peer(`lshamis_durak_room_${name}`);
+                room.peer.on('open', id => {
+                    console.log('peer open', id);
+                });
+                room.peer.on('connection', conn => {
+                    console.log('remote conn', conn);
+
+                    conn.on('data', data => {
+                        console.log('conn data', data);
+                    });
+                    conn.on('open', () => {
+                        console.log('conn open');
+                        conn.send("hello buddy")
+                    });
+                    conn.on('close', () => {
+                        console.log('conn close');
+                    });
+                    conn.on('error', err => {
+                        console.log('conn error', err);
+                    });
+                });
+                room.peer.on('call', media_conn => {
+                    console.log('peer call', media_conn);
+                });
+                room.peer.on('close', () => {
+                    console.log('peer close');
+                });
+                room.peer.on('disconnected', () => {
+                    console.log('peer disconnected');
+                });
+                room.peer.on('error', err => {
+                    console.log('peer error', err);
+                });
+                return room;
+            }
+
+            static join(name) {
+                const room = new Room();
+                room.name = name;
+                room.peer = new Peer();
+                room.peer.on('open', id => {
+                    console.log('peer open', id);
+
+                    room.conn = room.peer.connect(`lshamis_durak_room_${name}`);
+                    room.conn.on('data', data => {
+                        console.log('conn data', data);
+                    });
+                    room.conn.on('open', () => {
+                        console.log('conn open');
+                    });
+                    room.conn.on('close', () => {
+                        console.log('conn close');
+                    });
+                    room.conn.on('error', err => {
+                        console.log('conn error', err);
+                    });
+                });
+                room.peer.on('close', () => {
+                    console.log('peer close');
+                });
+                room.peer.on('disconnected', () => {
+                    console.log('peer disconnected');
+                });
+                room.peer.on('error', err => {
+                    console.log('peer error', err);
+                });
+
+                return room;
+            }
+        };
+
         const vueobj = new Vue({
             el: '#app',
             data: {
-                mode: '',
-                conn: null,
-                chan: null,
-                offer: null,
-                answer: null,
-                ice_candidates: [],
-                potential_offer: null,
-                potential_answer: null,
-                remote_ice_candidate: null,
-                connected: false,
-                local_data: '',
-                remote_data: '',
-            },
-            watch: {
-                local_data: function (val) {
-                    const vm = this;
-                    vm.chan.send(val);
-                }
+                mode: 'login',
+                name: '',
+                room: '',
+                Card: Card,
+                game: null,
             },
             methods: {
-                reset() {
-                    const vm = this;
-                    vm.mode = '';
-                    vm.conn = null;
-                    vm.chan = null;
-                    vm.offer = null;
-                    vm.answer = null;
-                    vm.ice_candidates = [];
-                    vm.potential_offer = null;
-                    vm.potential_answer = null;
-                    vm.remote_ice_candidate = null;
-                    vm.connected = false;
-                    vm.local_data = '';
-                    vm.remote_data = '';
-                },
                 host() {
                     const vm = this;
-                    vm.reset();
-                    vm.mode = 'host';
-
-                    vm.make_conn();
-
-                    vm.conn.onnegotiationneeded = () => {
-                        vm.conn.createOffer().then(
-                            (offer_desc) => {
-                                vm.conn.setLocalDescription(offer_desc);
-                                vm.offer = JSON.stringify(offer_desc.toJSON());
-                            },
-                            (err) => {
-                                console.log(`Failed to create session description: ${err.toString()}`);
-                            }
-                        );
-                    }
-
-                    vm.chan = vm.conn.createDataChannel('stuff');
-                    vm.setup_chan();
+                    vm.mode = 'game';
+                    vm.game = Game.new([1, 2, 3, 4, 5])
+                    console.log('game', vm.game.state)
                 },
                 join() {
                     const vm = this;
-                    vm.reset();
-                    vm.mode = 'join';
-
-                    vm.make_conn();
-
-                    vm.conn.ondatachannel = (evt) => {
-                        vm.chan = evt.channel;
-                        vm.setup_chan();
-                    };
+                    vm.mode = 'game';
                 },
-                accept_offer() {
-                    const vm = this;
-                    vm.offer = vm.potential_offer;
-                    vm.conn.setRemoteDescription(JSON.parse(vm.offer));
-                    vm.conn.createAnswer().then(
-                        (answer_desc) => {
-                            vm.conn.setLocalDescription(answer_desc);
-                            vm.answer = JSON.stringify(answer_desc.toJSON());
-                        },
-                        (err) => {
-                            console.log(`Failed to create session description: ${err.toString()}`);
-                        }
-                    );
-                },
-                accept_answer() {
-                    const vm = this;
-                    vm.answer = vm.potential_answer;
-                    vm.conn.setRemoteDescription(JSON.parse(vm.answer));
-                },
-                accept_remote_ice_candidate() {
-                    const vm = this;
-                    vm.remote_ice_candidate;
-                    vm.conn.addIceCandidate(JSON.parse(vm.remote_ice_candidate));
-                },
-                make_conn() {
-                    const vm = this;
-                    vm.conn = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
-                    vm.conn.onicecandidate = (evt) => {
-                        if (evt.candidate) {
-                            vm.ice_candidates.push(JSON.stringify(evt.candidate.toJSON()));
-                        }
-                    };
-                },
-                setup_chan() {
-                    const vm = this;
-                    vm.chan.onopen = () => {
-                        vm.connected = true;
-                    };
-                    vm.chan.onclose = () => {
-                        vm.connected = false;
-                    };
-                    vm.chan.onmessage = (evt) => {
-                        vm.remote_data = evt.data;
-                    };
-                },
-                clipboard(text) {
-                    navigator.clipboard.writeText(text);
-                }
-            },
+            }
         });
-
     </script>
 
 </body>
