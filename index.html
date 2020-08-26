@@ -5,6 +5,22 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.7.5/css/bulma.min.css" />
     <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
     <script src="https://unpkg.com/peerjs@1.3.1/dist/peerjs.min.js"></script>
+
+    <style>
+        .durak-active_player {
+            border-style: solid;
+            border-color: red;
+        }
+
+        .durak-inactive_player {
+            border-style: solid;
+            border-color: black;
+        }
+
+        .durak-empty_deck {
+            border-style: dashed;
+        }
+    </style>
 </head>
 
 <body>
@@ -48,30 +64,46 @@
         </div>
 
         <div v-if="mode == 'game'">
-
-            <div class="columns">
-                <div class="column is-2" style="display: grid;">
-                    <img v-if="game.deck.length >= 1" :src="Card.Images[game.deck[0]]">
-                    <img v-if="game.deck.length >= 2" :src="Card.Images.card_back_blue_and_brown"
-                        style="margin-top: -110%;">
-                    <p style="margin-top: -150%; text-align: center; font-size: 4em; -webkit-text-stroke: 2px white;">
-                        {{game.deck.length}}
-                    </p>
+            <section class="section" style="height: 100%;">
+                <div class="tile is-ancestor">
+                    <div class="tile is-parent is-vertical is-4">
+                        <div class="tile" v-for="pid in game.player_ids"
+                            :class="{ 'durak-active_player': pid == game.active_player , 'durak-inactive_player': pid != game.active_player }">
+                            Video for player {{pid}}.<br>
+                            I am {{player_id}}.<br>
+                            Active player is {{game.active_player}}
+                        </div>
+                    </div>
+                    <div class="tile is-vertical">
+                        <div class="tile is-parent">
+                            <div class="tile" v-for="attack_idx in [0, 1, 2, 3, 4, 5]">
+                                <img :src="Card.Images.card_back_green_and_dark_red">
+                            </div>
+                        </div>
+                        <div class="tile is-parent">
+                            <div class="tile is-4"></div>
+                            <div class="tile" :class="{ 'durak-empty_deck': game.deck.length == 0 }"
+                                style="position: relative">
+                                <img v-if="game.deck.length >= 1" :src="Card.Images[game.deck[0]]">
+                                <img v-if="game.deck.length >= 2" :src="Card.Images.card_back_blue_and_brown"
+                                    style="margin-top: 4em; position: absolute; transform: rotate(90deg);">
+                                <div
+                                    style="text-align: center; font-size: 4em; -webkit-text-stroke: 2px white; position: absolute; top: 50%; left: 0; right: 0;">
+                                    {{game.deck.length}}
+                                    <span v-if="'♣♠'.includes(game.trump)">{{game.trump}}</span>
+                                    <span v-else style="color: red">{{game.trump}}</span>
+                                </div>
+                            </div>
+                            <div class="tile is-4"></div>
+                        </div>
+                        <div class="tile is-parent">
+                            <div class="tile" v-for="card in game.hands[player_id]">
+                                <img :src="Card.Images[card]">
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="column" v-for="attack_idx in [0, 1, 2, 3, 4, 5]">
-                    Attack {{attack_idx}}
-                </div>
-            </div>
-
-            <div class="columns" v-for="pid in game.player_ids">
-                <div class="column is-2">
-                    Video
-                </div>
-                <div class="column" v-for="card in game.hands[pid]">
-                    <img v-if="pid == player_id" :src="Card.Images[card]">
-                    <img v-else :src="Card.Images.card_back_blue_and_brown">
-                </div>
-            </div>
+            </section>
 
         </div>
     </div>
