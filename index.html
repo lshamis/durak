@@ -20,6 +20,18 @@
         .durak-empty_deck {
             border-style: dashed;
         }
+
+        .durak-deck_info {
+            font-size: 4em;
+            left: 0;
+            position: absolute;
+            right: 0;
+            text-align: center;
+        }
+
+        .durak-nonempty_deck_info {
+            top: 50%;
+        }
     </style>
 </head>
 
@@ -77,28 +89,34 @@
                     <div class="tile is-vertical">
                         <div class="tile is-parent">
                             <div class="tile" v-for="attack_idx in [0, 1, 2, 3, 4, 5]">
-                                <img :src="Card.Images.card_back_green_and_dark_red">
+                                <img :src="Card.Images.card_back_green_and_dark_red"
+                                    style="border-style: solid; border-color: white;">
                             </div>
                         </div>
                         <div class="tile is-parent">
-                            <div class="tile is-4"></div>
+                            <div class="tile is-4" style="position: relative;">
+                                <div class="durak-deck_info"
+                                    :class="{ 'durak-nonempty_deck_info': game.deck.length != 0 } ">
+                                    {{game.deck.length}}</div>
+                            </div>
                             <div class="tile" :class="{ 'durak-empty_deck': game.deck.length == 0 }"
                                 style="position: relative">
                                 <img v-if="game.deck.length >= 1" :src="Card.Images[game.deck[0]]">
                                 <img v-if="game.deck.length >= 2" :src="Card.Images.card_back_blue_and_brown"
                                     style="margin-top: 4em; position: absolute; transform: rotate(90deg);">
-                                <div
-                                    style="text-align: center; font-size: 4em; -webkit-text-stroke: 2px white; position: absolute; top: 50%; left: 0; right: 0;">
-                                    {{game.deck.length}}
-                                    <span v-if="'♣♠'.includes(game.trump)">{{game.trump}}</span>
-                                    <span v-else style="color: red">{{game.trump}}</span>
-                                </div>
                             </div>
-                            <div class="tile is-4"></div>
+                            <div class="tile is-4" style="position: relative;">
+                                <span class="durak-deck_info"
+                                    :class="{ 'durak-nonempty_deck_info': game.deck.length != 0 }"
+                                    v-if="'♣♠'.includes(game.trump)">{{game.trump}}</span>
+                                <span class="durak-deck_info"
+                                    :class="{ 'durak-nonempty_deck_info': game.deck.length != 0 }" v-else
+                                    style="color: red">{{game.trump}}</span>
+                            </div>
                         </div>
                         <div class="tile is-parent">
                             <div class="tile" v-for="card in game.hands[player_id]">
-                                <img :src="Card.Images[card]">
+                                <img :src="Card.Images[card]" style="border-style: solid; border-color: white;">
                             </div>
                         </div>
                     </div>
@@ -489,7 +507,9 @@
                 join() {
                     const vm = this;
                     vm.mode = 'game';
-                    vm.player_id = 1;
+                    vm.game = Game.new([0, 1, 2, 3, 4, 5])
+                    vm.player_id = 0;
+                    console.log('game', vm.game.state)
                 },
             }
         });
