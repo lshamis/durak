@@ -80,15 +80,18 @@
                 <div class="tile is-ancestor">
                     <div class="tile is-parent is-vertical is-4">
                         <div class="tile" v-for="pid in game.player_ids"
-                            :class="{ 'durak-active_player': pid == game.active_player , 'durak-inactive_player': pid != game.active_player }">
+                            :class="{ 'durak-active_player': pid == game.active_player_id , 'durak-inactive_player': pid != game.active_player_id }">
                             Video for player {{pid}}.<br>
                             I am {{player_id}}.<br>
-                            Active player is {{game.active_player}}
+                            Active player is {{game.active_player_id}}
                         </div>
                     </div>
                     <div class="tile is-vertical">
                         <div class="tile is-parent">
-                            <div class="tile" v-for="attack_idx in [0, 1, 2, 3, 4, 5]">
+                            <div class="tile" v-for="stack in game.board">
+                                <img :src="Card.Images[stack[0]]" style="border-style: solid; border-color: white;">
+                            </div>
+                            <div class="tile" v-for="n in (6 - game.board.length)">
                                 <img :src="Card.Images.card_back_green_and_dark_red"
                                     style="border-style: solid; border-color: white;">
                             </div>
@@ -139,6 +142,10 @@
                 [arr[i], arr[j]] = [arr[j], arr[i]];
             }
             return arr;
+        }
+
+        function rotate(arr, n) {
+            return arr.slice(n, arr.length).concat(arr.slice(0, n));
         }
 
         class Card {
@@ -204,6 +211,8 @@
                 const game = new Game();
                 game.id = uuidv4();
                 game.player_ids = shuffle(player_ids);
+                game.live_player_ids = game.player_ids;
+                game.dead_player_ids = [];
 
                 // Prepare deck.
                 game.deck = [];
@@ -217,10 +226,10 @@
 
                 // Distribute cards.
                 game.hands = {};
-                for (let player_id of game.player_ids) {
-                    game.hands[player_id] = [];
+                for (let pid of game.live_player_ids) {
+                    game.hands[pid] = [];
                     for (let i = 0; i < 6; i++) {
-                        game.hands[player_id].push(game.deck.pop());
+                        game.hands[pid].push(game.deck.pop());
                     }
                 }
                 game._sort_hands();
@@ -228,12 +237,12 @@
                 // Determine player order.
                 let lowest_trump_value = Infinity;
                 game.active_player_idx = 0;
-                for (let player_idx = 0; player_idx < game.player_ids.length; player_idx++) {
-                    const player_id = game.player_ids[player_idx];
-                    for (let card of game.hands[player_id]) {
+                for (let pidx = 0; pidx < game.live_player_ids.length; pidx++) {
+                    const pid = game.live_player_ids[pidx];
+                    for (let card of game.hands[pid]) {
                         if (Card.suit(card) == game.trump && Card.value(card) < lowest_trump_value) {
                             lowest_trump_value = Card.value(card);
-                            game.active_player_idx = player_idx;
+                            game.active_player_idx = pidx;
                         }
                     }
                 }
@@ -253,35 +262,30 @@
                 return Object.assign(new Game(), JSON.parse(state));
             }
 
-            get active_player() {
-                return this.player_ids[this.active_player_idx]
+            get active_player_id() {
+                return this.live_player_ids[this.active_player_idx];
             }
 
             get defending_player_idx() {
-                return (this.active_player_idx + 1) % this.player_ids.length
+                return (this.active_player_idx + 1) % this.live_player_ids.length;
             }
 
-            get defending_player() {
-                return this.player_ids[this.defending_player_idx]
+            get defending_player_id() {
+                return this.live_player_ids[this.defending_player_idx];
             }
 
             _sort_hands() {
-                for (let player_id of this.player_ids) {
-                    this.hands[player_id].sort((lhs, rhs) => {
+                for (let pid of this.live_player_ids) {
+                    this.hands[pid].sort((lhs, rhs) => {
                         if (Card.suit(lhs) != Card.suit(rhs)) {
-                            if (Card.suit(lhs) == this.trump) {
-                                return 1;
-                            }
-                            if (Card.suit(rhs) == this.trump) {
-                                return -1;
-                            }
-                            return (Card.suit(lhs) < Card.suit(rhs)) ? -1 : 1;
+                            let lhs_trump = Card.suit(lhs) == this.trump;
+                            let rhs_trump = Card.suit(rhs) == this.trump;
+
+                            if (lhs_trump || rhs_trump) return +lhs_trump - +rhs_trump;
+                            return Card.suit(lhs) - Card.suit(rhs);
                         }
-                        if (Card.value(lhs) != Card.value(rhs)) {
-                            return (Card.value(lhs) < Card.value(rhs)) ? -1 : 1;
-                        }
-                        return 0;
-                    })
+                        return Card.value(lhs) - Card.value(rhs);
+                    });
                 }
             }
 
@@ -292,48 +296,87 @@
                     if (stack.length == 1) {
                         defense_was_successful = false;
                     } else if (stack.length != 2) {
-                        throw `Board state corrupted: unexepected stack of size ${stack.length}`
+                        throw `Board state corrupted: unexepected stack of size ${stack.length}`;
                     }
                     board_cards = board_cards.concat(stack);
                 }
 
-                // TODO: Draw cards, _sort_hands.
-                // TODO: Announce non-losers.
-                // TODO: Check for loser.
+                const draw_order_idx = rotate(Array.from({ length: this.live_player_ids.length }, (_, k) => k), this.defending_player_idx).reverse();
+                const draw_order_id = draw_order_idx.map(pidx => { this.live_player_ids[pidx] });
+                for (let pid of ddraw_order_id) {
+                    while (this.hands[pid].length < 6 && this.deck.length > 0) {
+                        this.hands[pid].push(this.deck.pop());
+                    }
+                }
+                this._sort_hands();
+
+                for (let pid of draw_order_id) {
+                    if (this.live_player_ids.length == 1) {
+                        // This player lost.
+                    }
+                    if (this.hands[pid].length == 0) {
+                        if (this.active_player_id == pid) {
+                            this.active_player_idx = (this.active_player_idx - 1 + this.live_player_ids.length) % this.live_player_ids.length;
+                        }
+                        this.live_player_ids = this.live_player_ids.filter(pid_ => { return pid_ != pid; });
+                        this.dead_player_ids.push(pid);
+                    }
+                }
 
                 if (defense_was_successful) {
                     this.discard = this.discard.concat(board_cards);
                     this.active_player_idx = (this.active_player_idx + 1) % this.player_ids.length;
                 } else {
-                    this.hands[this.active_player] = this.hands[this.active_player].concat(board_cards);
+                    this.hands[this.active_player_id] = this.hands[this.active_player_id].concat(board_cards);
                     this.active_player_idx = (this.active_player_idx + 2) % this.player_ids.length;
                 }
             }
 
-            validate_attack(player_id, card) {
-                if (!this.player_ids.includes(player_id)) {
+            validate_attack(pid, card) {
+                if (!this.live_player_ids.includes(pid)) {
                     return {
                         is_valid: false,
                         reason: 'Invalid player id.',
                     };
                 }
 
-                if (!this.hands[player_id].includes(card)) {
+                if (!this.hands[pid].includes(card)) {
                     return {
                         is_valid: false,
                         reason: 'Player does not have given card.',
                     };
                 }
 
-                if (player_id == this.defending_player) {
+                if (pid == this.defending_player) {
                     return {
                         is_valid: false,
                         reason: 'Defending player cannot attack.',
                     };
                 }
 
-                // If board is empty, validate player_id is active player.
-                // If board is not empty, validate card rank is already on the board.
+                if (this.board.length == 0 && pid != this.active_player_id) {
+                    return {
+                        is_valid: false,
+                        reason: 'Attacking player must play the first card.',
+                    };
+                }
+
+                if (this.board.length > 0) {
+                    let rank_played = false;
+                    for (let stack of this.board) {
+                        for (let c of stack) {
+                            if (Card.rank(c) == Card.rank(card)) {
+                                rank_played = true;
+                            }
+                        }
+                    }
+                    if (!rank_played) {
+                        return {
+                            is_valid: false,
+                            reason: 'May only play cards with ranks already on the board.',
+                        };
+                    }
+                }
 
                 if (this.board.length >= 6) {
                     return {
@@ -348,6 +391,16 @@
                 };
             }
 
+            legal_attacks(pid) {
+                const cards = [];
+                for (let card of this.hands[pid]) {
+                    if (this.validate_attack(pid, card).is_valid) {
+                        cards.push(card);
+                    }
+                }
+                return cards;
+            }
+
             attack(player_id, card) {
                 const attack_info = this.validate_attack(player_id, card);
                 if (!attack_info.is_valid) {
@@ -359,14 +412,14 @@
             }
 
             validate_defend(stack_idx, card) {
-                if (!this.hands[this.defending_player].includes(card)) {
+                if (!this.hands[this.defending_player_id].includes(card)) {
                     return {
                         is_valid: false,
                         reason: 'Player does not have given card.',
                     };
                 }
 
-                if (this.board.length <= stack_idx) {
+                if (stack_idx < 0 || this.board.length <= stack_idx) {
                     return {
                         is_valid: false,
                         reason: 'No such attack exists.',
@@ -400,6 +453,16 @@
                 };
             }
 
+            legal_defends(stack_idx) {
+                const cards = [];
+                for (let card of this.hands[this.defending_player_id]) {
+                    if (this.validate_defend(stack_idx, card).is_valid) {
+                        cards.push(card);
+                    }
+                }
+                return cards;
+            }
+
             defend(stack_idx, card) {
                 const defend_info = this.validate_defend(stack_idx, card);
                 if (!defend_info.is_valid) {
@@ -407,7 +470,7 @@
                 }
 
                 this.board[stack_idx].push(card);
-                this.hands[this.defending_player] = this.hands[this.defending_player].filter(c => { return c != card; });
+                this.hands[this.defending_player_id] = this.hands[this.defending_player_id].filter(c => { return c != card; });
             }
         };
 
