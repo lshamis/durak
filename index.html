@@ -27,10 +27,7 @@
             position: absolute;
             right: 0;
             text-align: center;
-        }
-
-        .durak-nonempty_deck_info {
-            top: 50%;
+            z-index: -1;
         }
     </style>
 </head>
@@ -78,6 +75,7 @@
         <div v-if="mode == 'game'">
             <section class="section" style="height: 100%;">
                 <div class="tile is-ancestor">
+                    <!-- LHS panel. Videos of other players. -->
                     <div class="tile is-parent is-vertical is-4">
                         <div class="tile" v-for="pid in game.player_ids"
                             :class="{ 'durak-active_player': pid == game.active_player_id , 'durak-inactive_player': pid != game.active_player_id }">
@@ -86,40 +84,58 @@
                             Active player is {{game.active_player_id}}
                         </div>
                     </div>
+                    <!-- Main game table. -->
                     <div class="tile is-vertical">
+                        <!-- Cards in play. -->
                         <div class="tile is-parent">
-                            <div class="tile" v-for="stack in game.board">
-                                <img :src="Card.Images[stack[0]]" style="border-style: solid; border-color: white;">
+                            <div class="tile" v-for="(stack, stack_idx) in game.board" style="position: relative;">
+                                <img v-if="stack.length == 1 && player_id == game.defending_player_id && selected_stack_idx == stack_idx"
+                                    :src="Card.Images[stack[0]]" style="border-style: solid; border-color: blue;">
+                                <img v-else-if="stack.length == 1 && player_id == game.defending_player_id"
+                                    :src="Card.Images[stack[0]]" style="border-style: solid; border-color: lightblue;"
+                                    @click="selected_stack_idx = stack_idx">
+                                <img v-else :src="Card.Images[stack[0]]"
+                                    style="border-style: solid; border-color: white;"
+                                    @click="selected_stack_idx = stack_idx">
+                                <img v-if="stack.length > 1" :src="Card.Images[stack[1]]" style="border-style: solid; border-color: white; position: absolute;
+                                top: 20%;">
                             </div>
                             <div class="tile" v-for="n in (6 - game.board.length)">
                                 <img :src="Card.Images.card_back_green_and_dark_red"
                                     style="border-style: solid; border-color: white;">
                             </div>
                         </div>
+                        <!-- Deck. -->
                         <div class="tile is-parent">
                             <div class="tile is-4" style="position: relative;">
-                                <div class="durak-deck_info"
-                                    :class="{ 'durak-nonempty_deck_info': game.deck.length != 0 } ">
+                                <div class="durak-deck_info" style="top: 50%; height: 100%">
                                     {{game.deck.length}}</div>
                             </div>
                             <div class="tile" :class="{ 'durak-empty_deck': game.deck.length == 0 }"
                                 style="position: relative">
                                 <img v-if="game.deck.length >= 1" :src="Card.Images[game.deck[0]]">
+                                <img v-else :src="Card.Images.card_back_green_and_dark_red">
+
                                 <img v-if="game.deck.length >= 2" :src="Card.Images.card_back_blue_and_brown"
-                                    style="margin-top: 4em; position: absolute; transform: rotate(90deg);">
+                                    style="top: 20%; position: absolute; transform: rotate(90deg);">
                             </div>
                             <div class="tile is-4" style="position: relative;">
-                                <span class="durak-deck_info"
-                                    :class="{ 'durak-nonempty_deck_info': game.deck.length != 0 }"
-                                    v-if="'♣♠'.includes(game.trump)">{{game.trump}}</span>
-                                <span class="durak-deck_info"
-                                    :class="{ 'durak-nonempty_deck_info': game.deck.length != 0 }" v-else
+                                <span v-if="'♣♠'.includes(game.trump)" class="durak-deck_info"
+                                    style="top: 50%; height: 100%">{{game.trump}}</span>
+                                <span v-else class="durak-deck_info" style="top: 50%; height: 100%"
                                     style="color: red">{{game.trump}}</span>
                             </div>
                         </div>
+                        <!-- Hand. -->
                         <div class="tile is-parent">
                             <div class="tile" v-for="card in game.hands[player_id]">
-                                <img :src="Card.Images[card]" style="border-style: solid; border-color: white;">
+                                <img v-if="game.validate_attack(player_id, card).is_valid" :src="Card.Images[card]"
+                                    style="border-style: solid; border-color: red;"
+                                    @click="game.attack(player_id, card)">
+                                <img v-else-if="player_id == game.defending_player_id && game.validate_defend(selected_stack_idx, card).is_valid"
+                                    :src="Card.Images[card]" style="border-style: solid; border-color: red;"
+                                    @click="game.defend(selected_stack_idx, card)">
+                                <img v-else :src="Card.Images[card]" style="border-style: solid; border-color: white;">
                             </div>
                         </div>
                     </div>
@@ -207,7 +223,7 @@
         };
 
         class Game {
-            static new(player_ids) {
+            static create(player_ids) {
                 const game = new Game();
                 game.id = uuidv4();
                 game.player_ids = shuffle(player_ids);
@@ -281,8 +297,10 @@
                             let lhs_trump = Card.suit(lhs) == this.trump;
                             let rhs_trump = Card.suit(rhs) == this.trump;
 
-                            if (lhs_trump || rhs_trump) return +lhs_trump - +rhs_trump;
-                            return Card.suit(lhs) - Card.suit(rhs);
+                            if (lhs_trump || rhs_trump) {
+                                return +lhs_trump - +rhs_trump;
+                            }
+                            return Card.Suits.indexOf(Card.suit(lhs)) - Card.Suits.indexOf(Card.suit(rhs));
                         }
                         return Card.value(lhs) - Card.value(rhs);
                     });
@@ -558,21 +576,22 @@
                 Card: Card,
                 game: null,
                 player_id: null,
+                selected_stack_idx: -1,
             },
             methods: {
                 host() {
                     const vm = this;
                     vm.mode = 'game';
-                    vm.game = Game.new([0, 1, 2, 3, 4])
+                    vm.game = Game.create([0, 1])
                     vm.player_id = 0;
-                    console.log('game', vm.game.state)
+                    console.log('game', vm.game.state);
                 },
                 join() {
                     const vm = this;
                     vm.mode = 'game';
-                    vm.game = Game.new([0, 1, 2, 3, 4, 5])
+                    vm.game = Game.create([0, 1, 2, 3, 4, 5])
                     vm.player_id = 0;
-                    console.log('game', vm.game.state)
+                    console.log('game', vm.game.state);
                 },
             }
         });
